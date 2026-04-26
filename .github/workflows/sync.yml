@@ -1,0 +1,45 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Execute every day at midnight
+  workflow_dispatch: # Workflow can be run manually from Github UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # A push will trigger Docker Workflow
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      - name: Sync with upstream
+        env:
+          UPSTREAM_URL: "https://github.com/rbsec/sslscan.git" # Project to clone
+          UPSTREAM_BRANCH: "master"
+        run: |
+          # Configure Git user for merge
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Add initial repo
+          git remote add upstream $UPSTREAM_URL
+          git fetch upstream
+          
+          # Check the difference with upstream repo
+          BEHIND=$(git rev-list HEAD..upstream/$UPSTREAM_BRANCH --count)
+          
+          if [ $BEHIND -gt 0 ]; then
+            echo "We are $BEHIND commits behind. Sync..."
+            git merge upstream/$UPSTREAM_BRANCH --no-edit
+            git push origin main
+            
+            # Synchronise the tags
+            git fetch upstream --tags
+            git push origin --tags
+          else
+            echo "Fork is already up to date with upstream."
+          fi
