@@ -34,6 +34,7 @@ jobs:
           
           if [ $BEHIND -gt 0 ]; then
             echo "We are $BEHIND commits behind. Sync..."
+            git commit -m "Automatic commit before merge"
             git merge upstream/$UPSTREAM_BRANCH --no-edit
             git push origin main
             
